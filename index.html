@@ -641,7 +641,7 @@
       <section id="view-formularios" class="view hidden">
         <div class="card" style="background:var(--primary-light);border-color:var(--tint)">
           <h3 style="color:var(--primary-dark)">Link para enviar ao paciente</h3>
-          <p class="muted" style="margin-bottom:10px">Envie este link para o paciente preencher os dados iniciais e assinar o contrato antes da primeira sessão. Publique o arquivo <code>formulario.html</code> junto com o sistema (veja o guia de configuração).</p>
+          <p class="muted" style="margin-bottom:10px"><strong>Passo 1 do novo paciente:</strong> envie este link para ele preencher os dados iniciais (nome, CPF, contato, responsáveis, queixa e consentimento LGPD). Depois clique em <em>Importar como paciente</em>. <strong>Passo 2:</strong> abra o paciente, adapte o contrato na aba <em>Contrato</em> e gere o link individual de assinatura.</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <input id="link-formulario" readonly style="flex:1;min-width:220px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface)" value="">
             <button class="btn sm" id="btn-copiar-link">Copiar link</button>
@@ -2219,11 +2219,8 @@ function abrirVerFormulario(id){
     ['Contato de emergência', f.emergencia? `${f.emergencia.nome} (${f.emergencia.parentesco}) · ${f.emergencia.telefone}`:''],
     ['Como conheceu', f.origem], ['Indicado por', f.indicadoPor],
     ['Queixa principal', f.queixa], ['Motivo da busca', f.motivo], ['Expectativas', f.expectativas],
-    ['Contrato aceito', f.contratoAceito? 'Sim':'Não'],
-    ['Assinado por', f.contratoAssinanteNome], ['CPF de quem assinou', f.contratoAssinanteCpf],
     ['Consentimento LGPD', f.lgpdConsentimento? 'Sim':'Não'],
     ['Data/hora do envio', fmtDateHora(f.criadoEm)],
-    ['Hash de verificação do contrato', f.contratoHash],
     ['Dispositivo (auditoria)', f.auditoria? `${f.auditoria.userAgent||''}`:''],
     ['Fuso horário (auditoria)', f.auditoria?.fusoHorario],
   ];
@@ -2242,18 +2239,15 @@ async function importarFormulario(id){
     emergencia: f.emergencia||{}, origem: f.origem||'Formulário online', indicadoPor: f.indicadoPor||'',
     tipoAtendimento: ['Psicoterapia'], tags: [], status:'ativo',
     anamnese: { queixa: f.queixa||'', motivo: f.motivo||'', expectativas: f.expectativas||'' },
-    contrato: {
-      texto: f.contratoTexto || state.config.modeloContrato, aceito: !!f.contratoAceito,
-      assinante: f.contratoAssinanteNome||f.nome, data: isoDate(new Date()), assinaturaDigital:true,
-      contratoHash: f.contratoHash||'', assinaturaAuditoria: f.auditoria||null, assinaturaEnviadaEm: f.criadoEm||null
-    },
+    contrato: { texto: state.config.modeloContrato, aceito:false },
+    lgpdAuditoria: f.auditoria||null,
     lgpdConsentimento: !!f.lgpdConsentimento,
     criadoEm: serverTimestamp()
   };
   await addDoc(collection(db,'pacientes'), payload);
   await updateDoc(doc(db,'formularios_recebidos',id), {status:'importado'});
   closeModal('modal-ver-formulario');
-  toast('Paciente criado a partir do formulário.');
+  toast('Paciente criado. Agora adapte o contrato na aba Contrato e gere o link de assinatura.');
 }
 async function descartarFormulario(id){
   if(!confirm('Descartar este formulário recebido? Ele deixará de aparecer na lista.')) return;

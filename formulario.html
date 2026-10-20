@@ -54,7 +54,7 @@
   </div>
 
   <div id="form-screen">
-    <div class="intro">Antes da primeira sessão, preencha este formulário com seus dados e leia o contrato terapêutico ao final. Isso agiliza o nosso primeiro encontro. Suas informações são de acesso restrito à psicóloga.</div>
+    <div class="intro">Antes da primeira sessão, preencha este formulário com seus dados. Isso agiliza o nosso primeiro encontro e deixa o seu cadastro pronto. O contrato terapêutico será enviado em seguida, em um link separado, já adaptado ao seu atendimento. Suas informações são de acesso restrito à psicóloga responsável.</div>
 
     <form id="intake-form">
       <div class="card">
@@ -105,17 +105,6 @@
       </div>
 
       <div class="card">
-        <h2>Contrato terapêutico</h2>
-        <div class="contrato-box" id="contrato-texto-publico"></div>
-        <div class="checkbox-row">
-          <input type="checkbox" id="f-aceito" required>
-          <label for="f-aceito">Li e estou de acordo com os termos do contrato terapêutico acima.</label>
-        </div>
-        <div class="field"><label>Nome completo de quem assina (paciente ou responsável legal) *</label><input id="f-assinante-nome" required></div>
-        <div class="field"><label>CPF de quem assina</label><input id="f-assinante-cpf"></div>
-      </div>
-
-      <div class="card">
         <h2>Tratamento de dados pessoais (LGPD)</h2>
         <div class="contrato-box" id="lgpd-texto-publico" style="max-height:140px">Seus dados pessoais e de saúde preenchidos neste formulário (incluindo informações sobre o motivo da busca por terapia) serão usados exclusivamente para fins do seu atendimento psicológico com a psicóloga Lívia Maria Cruz Melfa (CRP 06/228993), incluindo agendamento, elaboração de prontuário e contrato terapêutico. Os dados ficam armazenados de forma restrita, com acesso apenas da psicóloga responsável, pelo prazo de 20 (vinte) anos a contar do último registro (Lei nº 13.787/2018), respeitado o mínimo de 5 anos da Resolução CFP nº 001/2009. Você pode solicitar informações e correção dos seus dados diretamente com a psicóloga, conforme a Lei Geral de Proteção de Dados (Lei nº 13.709/2018). A eliminação dos dados do prontuário só ocorre após o fim do prazo de guarda, pois sua conservação é uma obrigação legal.</div>
         <div class="checkbox-row">
@@ -146,12 +135,12 @@
    mesmo banco de dados.
 ========================================================================= */
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "SEU_PROJETO.firebaseapp.com",
-  projectId: "SEU_PROJETO",
-  storageBucket: "SEU_PROJETO.appspot.com",
-  messagingSenderId: "SEU_SENDER_ID",
-  appId: "SEU_APP_ID"
+  apiKey: "AIzaSyDTLH342G-1PdScjqxAE0dTWQ9ZemKdU1U",
+  authDomain: "consultorio-livia.firebaseapp.com",
+  projectId: "consultorio-livia",
+  storageBucket: "consultorio-livia.firebasestorage.app",
+  messagingSenderId: "971861113479",
+  appId: "1:971861113479:web:37d8f62d1b5f4e839e1622"
 };
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -160,42 +149,7 @@ import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.g
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const MODELO_CONTRATO = `CONTRATO DE PSICOTERAPIA
 
-ATENDIMENTO:
-Cada atendimento clínico terá duração de 50 minutos, sendo realizado em horários previamente estabelecidos. O horário será reservado exclusivamente para o(a) paciente, não sendo possível sua extensão em caso de atraso.
-
-SIGILO E LIMITES:
-A psicóloga compromete-se a manter o sigilo profissional, conforme o Código de Ética Profissional do Psicólogo (art. 9º), garantindo a confidencialidade das informações trazidas pelo(a) paciente.
-No caso de atendimento a menores de idade, o sigilo será respeitado, sendo compartilhadas com os responsáveis apenas informações gerais sobre o processo terapêutico, sem exposição de conteúdos íntimos, salvo nas seguintes situações:
-- Quando houver risco à integridade do(a) paciente ou de terceiros;
-- Quando houver obrigação legal de comunicação.
-O(a) paciente será informado(a) sobre esses limites de forma clara e adequada à sua compreensão.
-
-HONORÁRIOS:
-Valor da sessão: R$ [valor]
-Pacote mensal (se aplicável): R$ [valor]
-A forma de pagamento será via [Pix / outro].
-Reajustes ou alterações contratuais serão previamente comunicados e acordados entre as partes.
-
-DESMARCAÇÕES OU MUDANÇAS DE HORÁRIO:
-As desmarcações deverão ser realizadas com antecedência mínima de 24 horas. Mudanças de horário estarão sujeitas à disponibilidade da psicóloga.
-
-FALTAS:
-Sessões em que o(a) paciente não comparecer serão cobradas normalmente. Após três faltas consecutivas sem aviso prévio, o atendimento poderá ser considerado interrompido, com possível perda do horário reservado.
-
-PARTICIPAÇÃO DOS RESPONSÁVEIS (quando aplicável):
-Os responsáveis legais poderão ser convidados para atendimentos pontuais de orientação ou acompanhamento do processo terapêutico, quando considerado pertinente pela psicóloga.
-
-DADOS PESSOAIS (LGPD):
-Os dados pessoais e de saúde do paciente são tratados conforme a Lei Geral de Proteção de Dados (Lei nº 13.709/2018), sendo utilizados exclusivamente para fins do atendimento psicológico. O prontuário psicológico será mantido em sigilo e sob guarda da psicóloga, em ambiente seguro, pelo prazo de 20 (vinte) anos a contar do último registro, conforme a Lei nº 13.787/2018, respeitado o prazo mínimo de 5 (cinco) anos previsto na Resolução CFP nº 001/2009. Findo esse prazo, poderá ser eliminado de forma segura. Durante o período de guarda, o registro não é apagado a pedido, pois sua conservação é obrigação legal e profissional; o(a) paciente tem direito de acesso às informações registradas sobre si.
-
-ENCERRAMENTO DO ATENDIMENTO:
-O processo psicoterapêutico poderá ser encerrado por qualquer das partes, sendo recomendado que o término seja previamente comunicado e, sempre que possível, realizado de forma planejada.
-
-Declaro que estou ciente e de acordo com as informações e regras acima.`;
-
-document.getElementById('contrato-texto-publico').textContent = MODELO_CONTRATO;
 
 /* ---- Responsáveis dinâmicos ---- */
 document.getElementById('f-menor').addEventListener('change', (e)=>{
@@ -219,28 +173,12 @@ document.getElementById('f-add-responsavel').addEventListener('click', ()=>{
 });
 document.getElementById('f-add-responsavel').click(); // já começa com um
 
-/* ---- Hash de verificação do texto do contrato (integridade) ---- */
-async function sha256Hex(texto){
-  try{
-    const buffer = new TextEncoder().encode(texto);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-    return [...new Uint8Array(hashBuffer)].map(b=> b.toString(16).padStart(2,'0')).join('');
-  }catch(ex){
-    return ''; // ambiente sem suporte a Web Crypto (ex.: acesso fora de HTTPS) — não deve bloquear o envio
-  }
-}
-
 /* ---- Envio ---- */
 document.getElementById('intake-form').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const errorEl = document.getElementById('form-error');
   errorEl.classList.add('hidden');
 
-  if(!document.getElementById('f-aceito').checked){
-    errorEl.textContent = 'É necessário concordar com os termos do contrato para enviar o formulário.';
-    errorEl.classList.remove('hidden');
-    return;
-  }
   if(!document.getElementById('f-lgpd').checked){
     errorEl.textContent = 'É necessário autorizar o tratamento de dados (LGPD) para enviar o formulário.';
     errorEl.classList.remove('hidden');
@@ -254,7 +192,6 @@ document.getElementById('intake-form').addEventListener('submit', async (e)=>{
     telefone: row.querySelector('.r-telefone').value,
   })).filter(r=> r.nome || r.telefone);
 
-  const contratoHash = await sha256Hex(MODELO_CONTRATO);
   const agora = new Date();
 
   const payload = {
@@ -276,11 +213,6 @@ document.getElementById('intake-form').addEventListener('submit', async (e)=>{
     queixa: document.getElementById('f-queixa').value,
     motivo: document.getElementById('f-motivo').value,
     expectativas: document.getElementById('f-expectativas').value,
-    contratoTexto: MODELO_CONTRATO,
-    contratoAceito: true,
-    contratoHash,
-    contratoAssinanteNome: document.getElementById('f-assinante-nome').value,
-    contratoAssinanteCpf: document.getElementById('f-assinante-cpf').value,
     lgpdConsentimento: true,
     lgpdTextoApresentado: document.getElementById('lgpd-texto-publico')?.textContent || '',
     auditoria: {
