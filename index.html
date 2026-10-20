@@ -981,6 +981,22 @@ function textoParaParagrafos(txt){
   const linhas = String(txt||'').split(/\n+/).map(l=>l.trim()).filter(Boolean);
   return linhas.length ? linhas.map(l=>`<p>${escapeHtml(l)}</p>`).join('') : '<p class="muted-print">—</p>';
 }
+function contratoParaHtml(txt){
+  const linhas = String(txt||'').split('\n').map(l=>l.trim());
+  let out='', lista=[];
+  const fecha = ()=>{ if(lista.length){ out += '<ul class="lista">'+lista.map(i=>`<li>${escapeHtml(i)}</li>`).join('')+'</ul>'; lista=[]; } };
+  linhas.forEach((l,i)=>{
+    if(!l){ fecha(); return; }
+    if(/^CONTRATO DE PSICOTERAPIA/i.test(l) && out==='') return;
+    if(/^[-•]\s+/.test(l)){ lista.push(l.replace(/^[-•]\s+/,'')); return; }
+    fecha();
+    const w0 = l.split(' ')[0];
+    if(l.endsWith(':') && l.length<90 && w0.length>3 && w0===w0.toUpperCase()){ out += `<h2 class="section">${escapeHtml(l)}</h2>`; return; }
+    out += `<p>${escapeHtml(l)}</p>`;
+  });
+  fecha();
+  return out;
+}
 function campoImpressao(label, value){
   if(value===undefined || value===null || value==='' || value===false) return '';
   return `<p class="kv-line"><b>${escapeHtml(label)}:</b> ${escapeHtml(value)}</p>`;
@@ -988,51 +1004,111 @@ function campoImpressao(label, value){
 function secaoImpressao(titulo, innerHtml){
   return `<h2 class="section">${escapeHtml(titulo)}</h2>${innerHtml && innerHtml.trim() ? innerHtml : '<p class="muted-print">—</p>'}`;
 }
+function nomeCurto(nome){
+  const p = String(nome||'').trim().split(/\s+/);
+  return p.length>2 ? p[0]+' '+p[p.length-1] : (nome||'Lívia Melfa');
+}
+const ONDA_TOPO = `<svg viewBox="0 0 210 50" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M42 0 C70 6 110 8 150 3 L158 0Z" fill="#D39B78"/><path d="M104 0 C132 8 165 7 190 0Z" fill="#D6763E"/><path d="M146 0 L210 0 L210 26 C196 12 172 3 146 0Z" fill="#AD6334"/><path d="M168 9 C188 14 204 28 210 44 L210 22 C198 14 184 10 168 9Z" fill="#D39B78"/></svg>`;
+const ONDA_BASE = `<svg viewBox="0 0 70 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 4 C4 24 24 46 46 58 C28 54 6 40 0 26Z" fill="#D39B78"/><path d="M0 30 C8 52 28 68 62 80 L0 80Z" fill="#D6763E"/><path d="M0 56 C8 68 22 76 34 80 L0 80Z" fill="#AD6334"/></svg>`;
 function abrirImpressao(titulo, corpoHtml, opts){
   opts = opts||{};
-  const cfg = state.config;
-  const logoSrc = document.querySelector('#sidebar .brand img')?.src || '';
-  const assinaturaBloco = opts.assinatura===false ? '' : `
-    <div class="signature">
-      <div class="stamp-space"><span>carimbo e assinatura</span></div>
-      <div class="sig-line">${escapeHtml(cfg.nome||'Lívia Melfa')}<br>Psicóloga · CRP ${escapeHtml(cfg.crp||'')}</div>
-    </div>`;
-  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>${escapeHtml(titulo)}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,600&family=Questrial&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <style>
-      @page{ margin:26mm 20mm 22mm; }
-      *{box-sizing:border-box}
-      body{ font-family:'Inter',sans-serif; color:#3A2E24; font-size:13px; line-height:1.65; margin:0; }
-      .header{ display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #EADFD1; padding-bottom:14px; margin-bottom:26px; }
-      .header .brand-name{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:27px; color:#B06436; margin:0; }
-      .header .crp{ font-family:'Questrial',sans-serif; font-size:11px; letter-spacing:.05em; color:#D6763E; text-transform:uppercase; margin-top:2px }
-      .header img{ height:44px; }
-      h1.doc-title{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:23px; color:#B06436; text-align:center; margin:0 0 26px; }
-      h2.section{ font-family:'Questrial',sans-serif; font-size:12.5px; letter-spacing:.04em; text-transform:uppercase; color:#D6763E; border-bottom:1px solid #EADFD1; padding-bottom:5px; margin:22px 0 9px; }
-      p{ margin:0 0 9px; white-space:pre-wrap; }
-      .muted-print{ color:#A79C87; }
-      .kv-line b{ color:#847A5C; font-weight:600; }
-      .signature{ margin-top:36px; text-align:center; }
-      .signature .stamp-space{ height:150px; display:flex; align-items:center; justify-content:center; }
-      .signature .stamp-space span{ font-family:'Questrial',sans-serif; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:#D9CFC0; }
-      .signature .sig-line{ display:inline-block; min-width:300px; border-top:1px solid #3A2E24; padding-top:8px; }
-      .footer{ margin-top:40px; text-align:center; font-size:10.5px; color:#847A5C; border-top:1px solid #EADFD1; padding-top:10px; }
-    </style></head>
-    <body>
-      <div class="header">
-        <div><div class="brand-name">${escapeHtml(cfg.nome||'Lívia Melfa')}</div><div class="crp">Psicóloga CRP ${escapeHtml(cfg.crp||'')}</div></div>
-        ${logoSrc? `<img src="${logoSrc}">`:''}
-      </div>
-      <h1 class="doc-title">${escapeHtml(titulo)}</h1>
-      ${corpoHtml}
-      ${assinaturaBloco}
-      <div class="footer">${[cfg.telefone, cfg.instagram, cfg.email].filter(Boolean).join('  ·  ')}</div>
-    </body></html>`;
+  const html = montarImpressaoHtml(titulo, corpoHtml, opts);
   const w = window.open('', '_blank');
   w.document.write(html);
   w.document.close();
   w.focus();
-  setTimeout(()=> w.print(), 350);
+  let feito = false;
+  const imprimir = ()=>{ if(feito) return; feito = true; try{ w.print(); }catch(ex){} };
+  try{ (w.document.fonts && w.document.fonts.ready ? w.document.fonts.ready : Promise.resolve()).then(()=> setTimeout(imprimir, 300)); }catch(ex){}
+  setTimeout(imprimir, 2500);
+}
+function montarImpressaoHtml(titulo, corpoHtml, opts){
+  const cfg = state.config;
+  const logoSrc = document.querySelector('#sidebar .brand img')?.src || '';
+  const nome = nomeCurto(cfg.nome);
+  const contatos = [cfg.telefone, cfg.instagram].filter(Boolean).join('   |   ');
+  const assinaturaBloco = opts.assinatura===false ? '' : `
+    <div class="signature">
+      <div class="stamp-space"><span>carimbo e assinatura</span></div>
+      <div class="sig-line">${escapeHtml(cfg.nome||'Lívia Melfa')}<br>Psicóloga<br>CRP ${escapeHtml(cfg.crp||'')}</div>
+    </div>`;
+  const rodape = `
+    <div class="rodape">
+      ${logoSrc? `<img src="${logoSrc}" alt="">`:''}
+      <div class="contatos">${escapeHtml(contatos)}${cfg.email? '<br>'+escapeHtml(cfg.email):''}</div>
+    </div>`;
+  const capa = opts.capa ? `
+    <section class="capa">
+      <div class="capa-topo">${ONDA_TOPO}</div>
+      <div class="capa-base">${ONDA_BASE}</div>
+      <div class="capa-id"><div class="brand-name">${escapeHtml(nome)}</div><div class="crp">Psicóloga CRP ${escapeHtml(cfg.crp||'')}</div></div>
+      <h1 class="capa-titulo">${escapeHtml(titulo)}</h1>
+      ${logoSrc? `<img class="capa-logo" src="${logoSrc}" alt="">`:''}
+      <div class="contatos capa-contatos">${escapeHtml(contatos)}${cfg.email? '<br>'+escapeHtml(cfg.email):''}</div>
+    </section>` : '';
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>${escapeHtml(titulo)}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,500;1,600&family=Questrial&family=Montserrat:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      @page{ size:A4; margin:0; }
+      *{box-sizing:border-box}
+      html,body{ margin:0; padding:0; }
+      body{ font-family:'Montserrat','Inter',sans-serif; color:#6E6548; font-size:12px; line-height:1.7;
+            -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      .fx-topo{ position:fixed; top:0; right:0; width:210mm; height:50mm; z-index:0; }
+      .fx-topo svg, .capa-topo svg, .capa-base svg, .fx-base svg{ width:100%; height:100%; display:block; }
+      .fx-base{ position:fixed; left:0; bottom:0; width:70mm; height:80mm; z-index:0; }
+      .fx-id{ position:fixed; top:14mm; left:22mm; z-index:2; }
+      .brand-name{ font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:600; font-size:36px; line-height:1; color:#D6763E; }
+      .crp{ font-family:'Questrial',sans-serif; font-size:13px; letter-spacing:.09em; color:#B06436; text-transform:uppercase; margin-top:4px; }
+      .rodape{ position:fixed; bottom:11mm; left:0; right:0; text-align:center; z-index:2; }
+      .rodape img{ height:15mm; display:block; margin:0 auto 4mm; }
+      .contatos{ font-family:'Montserrat',sans-serif; font-size:10.5px; letter-spacing:.09em; color:#847A5C; line-height:1.6; }
+      table.pagina{ width:100%; border-collapse:collapse; position:relative; z-index:1; }
+      table.pagina thead td{ height:44mm; padding:0; }
+      table.pagina tfoot td{ height:64mm; padding:0; }
+      table.pagina tbody td{ padding:0 22mm; vertical-align:top; }
+      h1.doc-title{ font-family:'Questrial',sans-serif; font-weight:400; font-size:14px; letter-spacing:.1em; text-transform:uppercase; color:#B06436; text-align:center; margin:2mm 0 9mm; }
+      h2.section{ display:table; border-collapse:separate; font-family:'Inter',sans-serif; font-weight:700; font-size:11.5px; letter-spacing:.01em; text-transform:uppercase; color:#6B4A32;
+                  background:#DDBBA3; margin:7mm 0 4mm -22mm; padding:6px 26px 6px 22mm; border-radius:0 22px 22px 0; page-break-after:avoid; break-after:avoid; }
+      p{ margin:0 0 8px; white-space:pre-wrap; text-align:justify; }
+      p.kv-line{ text-align:left; margin:0 0 4px; }
+      .muted-print{ color:#A79C87; }
+      .kv-line b{ color:#B06436; font-weight:600; }
+      ul.lista{ margin:0 0 8px; padding-left:20px; text-align:justify; }
+      ul.lista li{ margin:0 0 3px; }
+      .signature{ margin-top:10mm; text-align:center; page-break-inside:avoid; break-inside:avoid; }
+      .signature .stamp-space{ height:38mm; display:flex; align-items:center; justify-content:center; }
+      .signature .stamp-space span{ font-family:'Questrial',sans-serif; font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:#E3D6C8; }
+      .signature .sig-line, .ass .sig-line{ display:inline-block; min-width:70mm; border-top:1px solid #847A5C; padding-top:6px; font-size:11px; letter-spacing:.07em; color:#847A5C; line-height:1.55; }
+      .data-local{ text-align:right; margin:10mm 0 0; }
+      .assinaturas{ display:flex; justify-content:space-around; flex-wrap:wrap; gap:14mm; margin-top:20mm; page-break-inside:avoid; break-inside:avoid; }
+      .assinaturas .ass{ text-align:center; min-width:62mm; }
+      .selo-eletronico{ margin-top:8mm; padding:9px 14px; background:#F3EAE1; border-radius:8px; font-size:9.5px; color:#847A5C; word-break:break-all; page-break-inside:avoid; break-inside:avoid; }
+      /* capa */
+      .capa{ position:relative; width:210mm; height:297mm; background:#fff; page-break-after:always; break-after:page; overflow:hidden; z-index:20; margin-top:-0.1mm; }
+      .capa-topo{ position:absolute; top:0; right:0; width:210mm; height:50mm; }
+      .capa-base{ position:absolute; left:0; bottom:0; width:70mm; height:80mm; }
+      .capa-id{ position:absolute; top:14mm; left:22mm; }
+      .capa-titulo{ position:absolute; left:20mm; right:20mm; top:122mm; text-align:center; font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:600; font-size:34px; letter-spacing:.07em; text-transform:uppercase; color:#D6763E; line-height:1.4; margin:0; }
+      .capa-logo{ position:absolute; left:50%; transform:translateX(-50%); bottom:38mm; height:28mm; }
+      .capa-contatos{ position:absolute; left:0; right:0; bottom:14mm; text-align:center; }
+      ${opts.capa? '.fx-topo,.fx-base,.fx-id,.rodape{ }':''}
+      @media screen{ body{ background:#e9e4dc; } table.pagina, .capa{ background:#fff; margin-left:auto; margin-right:auto; width:210mm; } .fx-topo,.fx-base,.fx-id,.rodape{ position:absolute; } }
+    </style></head>
+    <body>
+      ${capa}
+      <div class="fx-topo">${ONDA_TOPO}</div>
+      <div class="fx-base">${ONDA_BASE}</div>
+      <div class="fx-id"><div class="brand-name">${escapeHtml(nome)}</div><div class="crp">Psicóloga CRP ${escapeHtml(cfg.crp||'')}</div></div>
+      ${rodape}
+      <table class="pagina"><thead><tr><td></td></tr></thead><tfoot><tr><td></td></tr></tfoot>
+        <tbody><tr><td>
+          <h1 class="doc-title">${escapeHtml(titulo)}</h1>
+          ${corpoHtml}
+          ${assinaturaBloco}
+        </td></tr></tbody>
+      </table>
+    </body></html>`;
 }
 function anamneseHtmlBody(p){
   const a = p.anamnese||{};
@@ -1676,19 +1752,31 @@ document.getElementById('btn-salvar-anamnese').addEventListener('click', async (
 document.getElementById('btn-imprimir-contrato').addEventListener('click', ()=>{
   const p = state.patients.find(x=>x.id===state.currentPatientId);
   if(!p) return;
-  let corpo = textoParaParagrafos(document.getElementById('contrato-texto').value);
-  const assinantes = [{nome:p.nome, papel:'Paciente', cpf:p.cpf}];
+  const cfg = state.config;
+  let texto = document.getElementById('contrato-texto').value;
+  // separa a frase final de concordância, que vai depois do local/data
+  let fecho = 'Declaro que estou ciente e de acordo com as informações e regras acima.';
+  const linhas = texto.split('\n');
+  for(let i=linhas.length-1;i>=0;i--){
+    if(/^Declaro que/i.test(linhas[i].trim())){ fecho = linhas[i].trim(); linhas.splice(i,1); break; }
+  }
+  texto = linhas.join('\n');
+  let corpo = contratoParaHtml(texto);
+  const cidade = String(cfg.cidade || 'Santa Fé do Sul').split(/\s*[–-]\s*/)[0];
+  const dataRef = p.contrato?.aceito && p.contrato?.data ? p.contrato.data : isoDate(new Date());
+  corpo += `<div style="page-break-inside:avoid;break-inside:avoid"><p style="margin-top:8mm">${escapeHtml(fecho)}</p>
+    <p class="data-local">${escapeHtml(cidade)}, ${escapeHtml(dataPorExtenso(dataRef))}.</p>`;
+  const assinantes = [{nome:p.nome, papel:p.menorIdade? 'Paciente (menor de idade)':'Paciente', cpf:p.cpf}];
   (p.responsaveis||[]).forEach(r=> assinantes.push({nome:r.nome, papel:'Responsável legal', cpf:r.cpf}));
-  corpo += `<div style="margin-top:70px;display:flex;justify-content:space-around;flex-wrap:wrap;gap:40px">` +
-    assinantes.map(a=>`<div style="text-align:center;min-width:220px"><div style="height:70px"></div><div style="border-top:1px solid #3A2E24;padding-top:7px">${escapeHtml(a.nome||'')}<br>${a.papel}${a.cpf? '<br>CPF: '+escapeHtml(a.cpf):''}</div></div>`).join('') +
-    `</div>`;
+  corpo += `<div class="assinaturas">` + assinantes.map(a=>`<div class="ass"><div class="sig-line">${escapeHtml(a.nome||'')}<br>${escapeHtml(a.papel)}${a.cpf? '<br>CPF: '+escapeHtml(a.cpf):''}</div></div>`).join('') + `</div>`;
+  corpo += `<div class="signature"><div class="stamp-space"><span>carimbo e assinatura</span></div><div class="sig-line">${escapeHtml(cfg.nome||'')}<br>Psicóloga<br>CRP ${escapeHtml(cfg.crp||'')}</div></div></div>`;
   if(p.contrato?.assinaturaDigital){
-    corpo += `<div style="margin-top:26px;padding:10px 14px;background:#F3EAE1;border-radius:8px;font-size:11px;color:#847A5C">
-      Assinatura eletrônica registrada via formulário digital em ${fmtDateHora(p.contrato.assinaturaEnviadaEm)||p.contrato.data}.
-      ${p.contrato.contratoHash? 'Hash de verificação do texto assinado: '+escapeHtml(p.contrato.contratoHash):''}
+    corpo += `<div class="selo-eletronico">
+      Assinatura eletrônica registrada${p.contrato.assinante? ' por <b>'+escapeHtml(p.contrato.assinante)+'</b>':''} em ${escapeHtml(fmtDateHora(p.contrato.assinaturaEnviadaEm)||fmtDate(p.contrato.data))}.
+      ${p.contrato.contratoHash? '<br>Hash de verificação do texto assinado: '+escapeHtml(p.contrato.contratoHash):''}
     </div>`;
   }
-  abrirImpressao('Contrato de Psicoterapia', corpo, {assinatura:true});
+  abrirImpressao('Contrato de Psicoterapia', corpo, {assinatura:false, capa:true});
 });
 document.getElementById('btn-salvar-contrato-texto').addEventListener('click', async ()=>{
   const id = state.currentPatientId;
