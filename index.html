@@ -649,11 +649,17 @@
       <!-- FORMULÁRIOS RECEBIDOS -->
       <section id="view-formularios" class="view hidden">
         <div class="card" style="background:var(--primary-light);border-color:var(--tint)">
-          <h3 style="color:var(--primary-dark)">Link para enviar ao paciente</h3>
-          <p class="muted" style="margin-bottom:10px"><strong>Passo 1 do novo paciente:</strong> envie este link para ele preencher os dados iniciais (nome, CPF, contato, responsáveis, queixa e consentimento LGPD). Depois clique em <em>Importar como paciente</em>. <strong>Passo 2:</strong> abra o paciente, adapte o contrato na aba <em>Contrato</em> e gere o link individual de assinatura.</p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <h3 style="color:var(--primary-dark)">Links para enviar ao novo paciente</h3>
+          <p class="muted" style="margin-bottom:10px"><strong>Passo 1:</strong> envie o link de cadastro para a pessoa preencher os dados iniciais. Depois clique em <em>Importar como paciente</em>. <strong>Passo 2:</strong> abra o cadastro, adapte o contrato na aba <em>Contrato</em> e gere o link individual de assinatura.</p>
+          <label style="font-size:12.5px;font-weight:600;color:var(--ink-soft)">Cadastro de paciente (psicoterapia)</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 12px">
             <input id="link-formulario" readonly style="flex:1;min-width:220px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface)" value="">
             <button class="btn sm" id="btn-copiar-link">Copiar link</button>
+          </div>
+          <label style="font-size:12.5px;font-weight:600;color:var(--ink-soft)">Cadastro de supervisão</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+            <input id="link-formulario-sup" readonly style="flex:1;min-width:220px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface)" value="">
+            <button class="btn sm" id="btn-copiar-link-sup">Copiar link</button>
           </div>
         </div>
         <div class="row-between"><h3 style="margin:0">Formulários recebidos</h3></div>
@@ -1791,6 +1797,7 @@ function renderPatientDetail(id){
     <div class="k">Contato de emergência</div><div>${p.emergencia?.nome||'—'} (${p.emergencia?.parentesco||''}) · ${p.emergencia?.telefone||''}</div>
     <div class="k">Encaminhamento</div><div>${p.origem||''}${p.indicadoPor? ' · '+p.indicadoPor:''}</div>
     <div class="k">Tipo de atendimento</div><div>${(p.tipoAtendimento||[]).join(', ')||'—'}</div>
+    ${p.supervisao? `<div class="k">Empresa / cargo</div><div>${escapeHtml(p.supervisao.empresa||'—')}${p.supervisao.cargo? ' · '+escapeHtml(p.supervisao.cargo):''}</div><div class="k">Formação</div><div>${escapeHtml(p.supervisao.formacao||'—')}</div><div class="k">Expectativas</div><div>${escapeHtml(p.supervisao.expectativas||'—')}</div>`:''}
   `;
 
   // Anamnese
@@ -2380,6 +2387,12 @@ function gerarRecibo(sessionId){
 
 /* ==================== FORMULÁRIOS RECEBIDOS ==================== */
 document.getElementById('link-formulario').value = location.href.replace(/[^\/]*$/, '') + 'formulario.html';
+document.getElementById('link-formulario-sup').value = location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '') + 'formulario.html?tipo=supervisao';
+document.getElementById('btn-copiar-link-sup').addEventListener('click', async ()=>{
+  const input = document.getElementById('link-formulario-sup');
+  try{ await navigator.clipboard.writeText(input.value); toast('Link copiado.'); }
+  catch(ex){ input.select(); document.execCommand('copy'); toast('Link copiado.'); }
+});
 document.getElementById('btn-copiar-link').addEventListener('click', async ()=>{
   const input = document.getElementById('link-formulario');
   try{ await navigator.clipboard.writeText(input.value); toast('Link copiado.'); }
@@ -2396,8 +2409,8 @@ function renderFormularios(){
     <div class="card" style="margin-bottom:10px">
       <div class="row-between" style="margin-bottom:0">
         <div>
-          <strong>${f.nome||'(sem nome)'}</strong>
-          <div class="muted" style="margin-top:4px">${f.telefone||''}${f.email? ' · '+f.email:''}</div>
+          <strong>${escapeHtml(f.nome||'(sem nome)')}</strong> ${f.tipoCadastro==='supervisao' ? '<span class="badge pacote">Supervisão</span>' : ''}
+          <div class="muted" style="margin-top:4px">${escapeHtml(f.telefone||'')}${f.email? ' · '+escapeHtml(f.email):''}</div>
           <div class="muted">Enviado em ${fmtDateHora(f.criadoEm)}</div>
         </div>
         <div style="display:flex;gap:8px">
@@ -2421,13 +2434,15 @@ function abrirVerFormulario(id){
     ['Responsáveis', (f.responsaveis||[]).map(r=>`${r.nome} (${r.parentesco}) · ${r.telefone}`).join('; ')],
     ['Contato de emergência', f.emergencia? `${f.emergencia.nome} (${f.emergencia.parentesco}) · ${f.emergencia.telefone}`:''],
     ['Como conheceu', f.origem], ['Indicado por', f.indicadoPor],
+    ['Empresa / instituição', f.supervisao?.empresa], ['Cargo / função', f.supervisao?.cargo], ['Formação', f.supervisao?.formacao],
+    ['Expectativas da supervisão', f.supervisao?.expectativas], ['Áreas a desenvolver', f.supervisao?.demandas],
     ['Queixa principal', f.queixa], ['Motivo da busca', f.motivo], ['Expectativas', f.expectativas],
     ['Consentimento LGPD', f.lgpdConsentimento? 'Sim':'Não'],
     ['Data/hora do envio', fmtDateHora(f.criadoEm)],
     ['Dispositivo (auditoria)', f.auditoria? `${f.auditoria.userAgent||''}`:''],
     ['Fuso horário (auditoria)', f.auditoria?.fusoHorario],
   ];
-  document.getElementById('ver-formulario-body').innerHTML = linhas.filter(([,v])=>v).map(([k,v])=>`<div class="k">${k}</div><div>${v}</div>`).join('');
+  document.getElementById('ver-formulario-body').innerHTML = linhas.filter(([,v])=>v).map(([k,v])=>`<div class="k">${escapeHtml(k)}</div><div>${escapeHtml(v)}</div>`).join('');
   openModal('modal-ver-formulario');
 }
 document.getElementById('vf-importar').addEventListener('click', ()=> importarFormulario(document.getElementById('vf-importar').dataset.id));
@@ -2440,9 +2455,10 @@ async function importarFormulario(id){
     dataNascimento: f.dataNascimento||'', endereco: f.endereco||'',
     menorIdade: !!f.menorIdade, responsaveis: f.responsaveis||[],
     emergencia: f.emergencia||{}, origem: f.origem||'Formulário online', indicadoPor: f.indicadoPor||'',
-    tipoAtendimento: ['Psicoterapia'], tags: [], status:'ativo',
+    tipoAtendimento: [f.tipoCadastro==='supervisao' ? 'Supervisão' : 'Psicoterapia'], tags: [], status:'ativo',
+    ...(f.tipoCadastro==='supervisao' ? {supervisao: f.supervisao||{}} : {}),
     anamnese: { queixa: f.queixa||'', motivo: f.motivo||'', expectativas: f.expectativas||'' },
-    contrato: { texto: state.config.modeloContrato, aceito:false },
+    contrato: { texto: modeloParaPaciente({tipoAtendimento:[f.tipoCadastro==='supervisao' ? 'Supervisão' : 'Psicoterapia']}), aceito:false },
     lgpdAuditoria: f.auditoria||null,
     lgpdConsentimento: !!f.lgpdConsentimento,
     criadoEm: serverTimestamp()

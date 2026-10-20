@@ -71,7 +71,7 @@
         <div class="field"><label>Endereço</label><input id="f-endereco"></div>
       </div>
 
-      <div class="card">
+      <div class="card" id="card-responsavel">
         <h2>Responsável legal (se menor de idade)</h2>
         <div class="checkbox-row"><input type="checkbox" id="f-menor"><label for="f-menor">Sou menor de idade / este formulário está sendo preenchido por um responsável</label></div>
         <div id="f-responsaveis-block" class="hidden">
@@ -80,7 +80,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" id="card-emergencia">
         <h2>Contato de emergência</h2>
         <div class="grid-2">
           <div class="field"><label>Nome</label><input id="f-emerg-nome"></div>
@@ -97,11 +97,22 @@
         <div class="field"><label>Quem indicou / convênio (se aplicável)</label><input id="f-indicado"></div>
       </div>
 
-      <div class="card">
+      <div class="card" id="card-queixa">
         <h2>Um pouco sobre o que te trouxe até aqui</h2>
         <div class="field"><label>O que motivou você a buscar terapia agora?</label><textarea id="f-queixa"></textarea></div>
         <div class="field"><label>Há quanto tempo isso vem acontecendo? Algum contexto que ajude a entender</label><textarea id="f-motivo"></textarea></div>
         <div class="field"><label>O que você espera do processo terapêutico?</label><textarea id="f-expectativas"></textarea></div>
+      </div>
+
+      <div class="card hidden" id="card-supervisao">
+        <h2>Sobre a supervisão</h2>
+        <div class="field"><label>Empresa / instituição onde você atua</label><input id="f-sup-empresa"></div>
+        <div class="grid-2">
+          <div class="field"><label>Cargo / função</label><input id="f-sup-cargo"></div>
+          <div class="field"><label>Formação (curso e instituição de ensino, se estudante)</label><input id="f-sup-formacao"></div>
+        </div>
+        <div class="field"><label>O que você espera da supervisão?</label><textarea id="f-sup-expectativas"></textarea></div>
+        <div class="field"><label>Quais áreas ou situações do seu trabalho deseja desenvolver? (sem identificar pessoas ou dados confidenciais da empresa)</label><textarea id="f-sup-demandas"></textarea></div>
       </div>
 
       <div class="card">
@@ -150,6 +161,17 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 
+
+/* ---- Modo do formulário: psicoterapia (padrão) ou supervisão (?tipo=supervisao) ---- */
+const MODO = new URLSearchParams(location.search).get('tipo')==='supervisao' ? 'supervisao' : 'psicoterapia';
+if(MODO==='supervisao'){
+  document.title = 'Cadastro de Supervisão · Lívia Melfa';
+  document.querySelector('.intro').textContent = 'Antes do nosso primeiro encontro de supervisão, preencha este formulário com seus dados. O contrato de supervisão será enviado em seguida, em um link separado. Suas informações são de acesso restrito à psicóloga responsável.';
+  ['card-responsavel','card-emergencia','card-queixa'].forEach(id=> document.getElementById(id).classList.add('hidden'));
+  document.getElementById('card-supervisao').classList.remove('hidden');
+  document.getElementById('lgpd-texto-publico').textContent = 'Seus dados pessoais e profissionais preenchidos neste formulário serão usados exclusivamente para fins da supervisão profissional com a psicóloga Lívia Maria Cruz Melfa (CRP 06/228993), incluindo agendamento e contrato. Os dados ficam armazenados de forma restrita, com acesso apenas da psicóloga responsável, pelo tempo necessário à finalidade e a eventuais obrigações legais. Você pode solicitar informações e correção dos seus dados diretamente com a psicóloga, conforme a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).';
+  document.querySelector('label[for="f-lgpd"]').textContent = 'Autorizo o tratamento dos meus dados pessoais e profissionais para os fins descritos acima, conforme a LGPD.';
+}
 
 /* ---- Responsáveis dinâmicos ---- */
 document.getElementById('f-menor').addEventListener('change', (e)=>{
@@ -201,8 +223,8 @@ document.getElementById('intake-form').addEventListener('submit', async (e)=>{
     telefone: document.getElementById('f-telefone').value,
     email: document.getElementById('f-email').value,
     endereco: document.getElementById('f-endereco').value,
-    menorIdade: document.getElementById('f-menor').checked,
-    responsaveis,
+    menorIdade: MODO==='supervisao' ? false : document.getElementById('f-menor').checked,
+    responsaveis: MODO==='supervisao' ? [] : responsaveis,
     emergencia: {
       nome: document.getElementById('f-emerg-nome').value,
       telefone: document.getElementById('f-emerg-telefone').value,
@@ -210,6 +232,12 @@ document.getElementById('intake-form').addEventListener('submit', async (e)=>{
     },
     origem: document.getElementById('f-origem').value,
     indicadoPor: document.getElementById('f-indicado').value,
+    tipoCadastro: MODO,
+    supervisao: MODO==='supervisao' ? {
+      empresa: document.getElementById('f-sup-empresa').value, cargo: document.getElementById('f-sup-cargo').value,
+      formacao: document.getElementById('f-sup-formacao').value, expectativas: document.getElementById('f-sup-expectativas').value,
+      demandas: document.getElementById('f-sup-demandas').value
+    } : null,
     queixa: document.getElementById('f-queixa').value,
     motivo: document.getElementById('f-motivo').value,
     expectativas: document.getElementById('f-expectativas').value,
