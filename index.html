@@ -144,7 +144,9 @@
   .badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600}
   .badge.agendada{background:var(--primary-light);color:var(--primary-dark)}
   .badge.realizada{background:var(--success-light);color:var(--success)}
-  .badge.cancelada{background:var(--surface-2);color:var(--ink-soft)}
+  .badge.cancelada,.badge.desmarcada{background:var(--surface-2);color:var(--ink-soft)}
+  .badge.pacote{background:#EFE4D2;color:var(--primary-dark)}
+  .badge.avulsa{background:#F6E8DE;color:var(--accent)}
   .badge.falta{background:var(--danger-light);color:var(--danger)}
   .badge.pago{background:var(--success-light);color:var(--success)}
   .badge.pendente{background:var(--warning-light);color:var(--warning)}
@@ -543,6 +545,13 @@
                 <button class="btn sm" id="btn-salvar-contrato-texto">Salvar texto</button>
               </div>
             </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+              <span class="muted">Carregar modelo:</span>
+              <select id="contrato-modelo-sel" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface)">
+                <option value="psico">Psicoterapia</option><option value="supervisao">Supervisão</option>
+              </select>
+              <button class="btn secondary sm" id="btn-carregar-modelo">Carregar</button>
+            </div>
             <div class="field"><textarea id="contrato-texto" style="min-height:220px"></textarea></div>
             <div class="checkbox-row">
               <input type="checkbox" id="contrato-aceito">
@@ -667,10 +676,26 @@
           <button class="btn sm" id="btn-salvar-config">Salvar</button>
         </div>
         <div class="card">
+          <h3>Valores padrão das sessões</h3>
+          <p class="muted">Usados para preencher o valor automaticamente na agenda (você pode alterar em cada sessão).</p>
+          <div class="grid-3">
+            <div class="field"><label>Sessão avulsa (R$)</label><input type="number" step="0.01" id="cfg-valor-avulsa"></div>
+            <div class="field"><label>Sessão do pacote mensal (R$)</label><input type="number" step="0.01" id="cfg-valor-pacote"></div>
+            <div class="field"><label>5ª sessão do mês, no pacote (R$)</label><input type="number" step="0.01" id="cfg-valor-quinta"></div>
+          </div>
+          <button class="btn sm" id="btn-salvar-valores">Salvar valores</button>
+        </div>
+        <div class="card">
           <h3>Modelo padrão de contrato terapêutico</h3>
           <p class="muted">Este texto é usado como base ao criar um contrato para um novo paciente. Edite os pacientes já existentes na aba "Contrato" de cada um.</p>
           <div class="field"><textarea id="cfg-modelo-contrato" style="min-height:260px"></textarea></div>
           <button class="btn sm" id="btn-salvar-modelo">Salvar modelo</button>
+        </div>
+        <div class="card">
+          <h3>Modelo de contrato de supervisão</h3>
+          <p class="muted">Usado ao cadastrar alguém com tipo de atendimento "Supervisão" (sem psicoterapia). Os trechos entre colchetes, como [valor] e [dia], devem ser preenchidos em cada contrato.</p>
+          <div class="field"><textarea id="cfg-modelo-supervisao" style="min-height:260px"></textarea></div>
+          <button class="btn sm" id="btn-salvar-modelo-supervisao">Salvar modelo de supervisão</button>
         </div>
         <div class="card" id="config-usuarios">
           <h3>Acesso da recepção</h3>
@@ -706,6 +731,7 @@
       <div class="checkbox-row"><input type="checkbox" class="mp-tipo-cb" value="Orientação Escolar" id="mp-tipo-escolar"><label for="mp-tipo-escolar">Orientação escolar</label></div>
       <div class="checkbox-row"><input type="checkbox" class="mp-tipo-cb" value="Laudo/Relatório" id="mp-tipo-laudo"><label for="mp-tipo-laudo">Laudo / relatório</label></div>
       <div class="checkbox-row"><input type="checkbox" class="mp-tipo-cb" value="Avaliação Psicológica" id="mp-tipo-avaliacao"><label for="mp-tipo-avaliacao">Avaliação psicológica</label></div>
+      <div class="checkbox-row"><input type="checkbox" class="mp-tipo-cb" value="Supervisão" id="mp-tipo-supervisao"><label for="mp-tipo-supervisao">Supervisão</label></div>
     </div>
     <div class="field"><label>Outro tipo de atendimento (opcional)</label><input id="mp-tipo-outro" placeholder="ex.: orientação parental"></div>
     <div class="checkbox-row"><input type="checkbox" id="mp-menor"><label for="mp-menor">Paciente é menor de idade</label></div>
@@ -753,11 +779,26 @@
       </div>
     </div>
     <div class="grid-2">
+      <div class="field"><label>Tipo de cobrança</label>
+        <select id="ms-cobranca"><option value="avulsa">Avulsa (paga individualmente)</option><option value="pacote">Pacote mensal</option></select>
+      </div>
       <div class="field"><label>Valor (R$)</label><input type="number" step="0.01" id="ms-valor"></div>
+    </div>
+    <div class="notice-box" id="ms-pacote-info"></div>
+    <div class="grid-2">
       <div class="field"><label>Status</label>
-        <select id="ms-status"><option value="agendada">Agendada</option><option value="realizada">Realizada</option><option value="cancelada">Cancelada</option><option value="falta">Falta</option></select>
+        <select id="ms-status"><option value="agendada">Agendada</option><option value="realizada">Realizada</option><option value="desmarcada">Desmarcada (com aviso)</option><option value="cancelada">Cancelada</option><option value="falta">Falta (cobrada)</option></select>
+      </div>
+      <div></div>
+    </div>
+    <div id="ms-bloco-repetir" class="card" style="background:var(--surface-2);padding:12px 14px;margin-bottom:12px">
+      <div class="checkbox-row" style="margin:0"><input type="checkbox" id="ms-repetir"><label for="ms-repetir"><strong>Horário fixo:</strong> repetir toda semana neste dia e horário</label></div>
+      <div id="ms-repetir-opcoes" class="hidden" style="margin-top:8px">
+        <div class="field" style="margin-bottom:0"><label>Quantas semanas (incluindo esta)?</label><input type="number" min="2" max="52" value="4" id="ms-repetir-semanas" style="max-width:120px"></div>
+        <p class="muted" style="margin:6px 0 0">Cada sessão fica independente: você pode desmarcar, remarcar (mudando a data) ou alterar qualquer uma depois. Datas com horário bloqueado são puladas.</p>
       </div>
     </div>
+    <div id="ms-bloco-serie" class="checkbox-row hidden"><input type="checkbox" id="ms-aplicar-serie"><label for="ms-aplicar-serie">Esta sessão faz parte de um horário fixo. Aplicar hora, duração, modalidade e tipo de cobrança também às <strong>próximas sessões agendadas</strong> da série</label></div>
     <div class="grid-2">
       <div class="field"><label>Pagamento</label>
         <select id="ms-pagto-status"><option value="pendente">Pendente</option><option value="pago">Pago</option></select>
@@ -915,7 +956,7 @@ const state = {
   calMonth: new Date(),
   weekStart: startOfWeek(new Date()),
   selectedDay: new Date(),
-  config:{ nome:'Lívia Maria Cruz Melfa', crp:'06/228993', telefone:'(14) 99835-7355', instagram:'@liviamelfapsi', email:'liviamelfapsi@gmail.com', endereco:'', modeloContrato: modeloContratoPadrao(), recepcaoEmail:'' }
+  config:{ nome:'Lívia Maria Cruz Melfa', crp:'06/228993', telefone:'(14) 99835-7355', instagram:'@liviamelfapsi', email:'liviamelfapsi@gmail.com', endereco:'', modeloContrato: modeloContratoPadrao(), recepcaoEmail:'', valorAvulsa:140, valorPacote:120, valorQuintaSessao:100 }
 };
 
 function modeloContratoPadrao(){
@@ -955,6 +996,53 @@ O processo psicoterapêutico poderá ser encerrado por qualquer das partes, send
 Declaro que estou ciente e de acordo com as informações e regras acima.`;
 }
 
+function modeloSupervisaoPadrao(){
+  return `CONTRATO DE SUPERVISÃO PROFISSIONAL
+
+OBJETO E FINALIDADE:
+Este contrato trata da supervisão profissional em Psicologia Organizacional e do Trabalho prestada pela psicóloga ao(à) supervisionando(a), com finalidade de orientação técnica, reflexão sobre a prática e desenvolvimento de competências profissionais.
+A supervisão tem caráter formativo e não constitui psicoterapia nem atendimento clínico ao(à) supervisionando(a). Ela não substitui a responsabilidade técnica e ética do(a) supervisionando(a) pelas atividades que realiza.
+Caso o(a) supervisionando(a) seja estudante, esta supervisão é complementar: não substitui o estágio curricular nem a supervisão da instituição de ensino, e não confere atribuições privativas de psicólogo(a) a quem ainda não é habilitado(a).
+
+ENCONTROS:
+Cada encontro terá duração de [duração] minutos, com periodicidade [semanal / quinzenal], em horários previamente combinados, na modalidade [presencial / online]. O horário será reservado exclusivamente para o(a) supervisionando(a), não sendo possível sua extensão em caso de atraso.
+
+SIGILO E LIMITES:
+A psicóloga compromete-se a manter o sigilo profissional, conforme o Código de Ética Profissional do Psicólogo (art. 9º).
+As situações e casos levados à supervisão devem ser apresentados sem a identificação das pessoas envolvidas (nomes, dados de contato, documentos ou outros elementos que permitam reconhecê-las). O(a) supervisionando(a) é responsável por respeitar as regras de confidencialidade da empresa em que atua e não compartilhar informações sigilosas do empregador ou de terceiros além do necessário.
+O sigilo poderá ser quebrado apenas nas seguintes situações:
+- Quando houver risco à integridade de pessoas;
+- Quando houver obrigação legal de comunicação.
+
+HONORÁRIOS:
+Valor do encontro: R$ [valor].
+Pacote mensal (se aplicável): R$ [valor].
+O pagamento deverá ser feito até o dia [dia] de cada mês, via [Pix / outro].
+Reajustes ou alterações contratuais serão previamente comunicados e acordados entre as partes.
+
+DESMARCAÇÕES OU MUDANÇAS DE HORÁRIO:
+As desmarcações deverão ser realizadas com antecedência mínima de 24 horas. Mudanças de horário estarão sujeitas à disponibilidade da psicóloga.
+
+FALTAS:
+Encontros em que o(a) supervisionando(a) não comparecer, sem aviso prévio, serão cobrados normalmente.
+
+DADOS PESSOAIS (LGPD):
+Os dados pessoais do(a) supervisionando(a) (identificação, contato e informações profissionais) são tratados conforme a Lei Geral de Proteção de Dados (Lei nº 13.709/2018), sendo utilizados exclusivamente para fins da supervisão. Os registros dos encontros são mantidos em ambiente seguro, com acesso restrito à psicóloga, pelo tempo necessário à finalidade e ao cumprimento de eventuais obrigações legais ou profissionais, podendo depois ser eliminados de forma segura. O(a) supervisionando(a) pode solicitar informações sobre seus dados a qualquer momento.
+
+ENCERRAMENTO DA SUPERVISÃO:
+A supervisão poderá ser encerrada por qualquer das partes, sendo recomendado que o término seja previamente comunicado e, sempre que possível, realizado de forma planejada.
+
+Declaro que estou ciente e de acordo com as informações e regras acima.`;
+}
+const LGPD_SUPERVISAO = 'Autorizo o tratamento dos meus dados pessoais e profissionais para fins da supervisão, conforme a Lei Geral de Proteção de Dados (Lei nº 13.709/2018). Os dados ficam em acesso restrito à psicóloga e são guardados em ambiente seguro pelo tempo necessário à finalidade e a eventuais obrigações legais.';
+function ehSupervisao(p){
+  const t = p?.tipoAtendimento||[];
+  return t.includes('Supervisão') && !t.includes('Psicoterapia');
+}
+function modeloParaPaciente(p){
+  return ehSupervisao(p) ? (state.config.modeloContratoSupervisao || modeloSupervisaoPadrao()) : state.config.modeloContrato;
+}
+
 function startOfWeek(d){
   const nd = new Date(d); const day = nd.getDay();
   nd.setDate(nd.getDate()-day); nd.setHours(0,0,0,0); return nd;
@@ -987,7 +1075,7 @@ function contratoParaHtml(txt){
   const fecha = ()=>{ if(lista.length){ out += '<ul class="lista">'+lista.map(i=>`<li>${escapeHtml(i)}</li>`).join('')+'</ul>'; lista=[]; } };
   linhas.forEach((l,i)=>{
     if(!l){ fecha(); return; }
-    if(/^CONTRATO DE PSICOTERAPIA/i.test(l) && out==='') return;
+    if(/^CONTRATO DE /i.test(l) && out==='') return;
     if(/^[-•]\s+/.test(l)){ lista.push(l.replace(/^[-•]\s+/,'')); return; }
     fecha();
     const w0 = l.split(' ')[0];
@@ -1303,11 +1391,11 @@ function renderDashboard(){
 function sessRowHTML(s, showDate){
   const p = state.patients.find(p=>p.id===s.patientId);
   return `<div class="sess-item sess-row" data-id="${s.id}" style="cursor:pointer">
-    <div class="info"><span class="time">${showDate? fmtDate(s.data)+' ':''}${s.hora}</span>${p?p.nome:'(paciente removido)'} <span class="muted">· ${s.modalidade}</span></div>
+    <div class="info"><span class="time">${showDate? fmtDate(s.data)+' ':''}${s.hora}</span>${p?escapeHtml(p.nome):'(paciente removido)'} <span class="muted">· ${s.modalidade}</span> ${etiquetaCobranca(s)}</div>
     <span class="badge ${s.status}">${statusLabel(s.status)}</span>
   </div>`;
 }
-function statusLabel(s){ return {agendada:'Agendada',realizada:'Realizada',cancelada:'Cancelada',falta:'Falta'}[s]||s; }
+function statusLabel(s){ return {agendada:'Agendada',realizada:'Realizada',desmarcada:'Desmarcada',cancelada:'Cancelada',falta:'Falta'}[s]||s; }
 
 /* ==================== AGENDA — MÊS ==================== */
 document.querySelectorAll('.tab-btn[data-agview]').forEach(b=> b.addEventListener('click', ()=>{
@@ -1383,6 +1471,56 @@ function populateSessionPatientSelect(){
   sel.innerHTML = state.patients.filter(p=>p.status!=='encerrado').map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
   if(cur) sel.value = cur;
 }
+/* ---- Cobrança: avulsa x pacote ---- */
+function sessaoConta(x){ return x.cobranca==='pacote' && x.status!=='cancelada' && x.status!=='desmarcada'; }
+// posição da sessão dentro do pacote do mês (considerando as já existentes + as planejadas)
+function posicaoPacote(patientId, dataIso, hora, excludeId, extras, excludeSerie){
+  const mes = (dataIso||'').slice(0,7);
+  const lista = state.sessions.filter(x=> x.patientId===patientId && x.id!==excludeId && !(excludeSerie && x.serieId===excludeSerie) && sessaoConta(x) && (x.data||'').startsWith(mes))
+    .map(x=>({data:x.data, hora:x.hora||''}));
+  (extras||[]).filter(x=> (x.data||'').startsWith(mes)).forEach(x=> lista.push({data:x.data, hora:x.hora||''}));
+  lista.push({data:dataIso, hora:hora||''});
+  lista.sort((a,b)=> (a.data+a.hora).localeCompare(b.data+b.hora));
+  const ordem = lista.findIndex(x=> x.data===dataIso && x.hora===(hora||'')) + 1;
+  return {ordem, total: lista.length};
+}
+function valorSugerido(cobranca, ordem){
+  const c = state.config;
+  if(cobranca==='pacote') return ordem>=5 ? Number(c.valorQuintaSessao ?? 100) : Number(c.valorPacote ?? 120);
+  return Number(c.valorAvulsa ?? 140);
+}
+function etiquetaCobranca(s){
+  if(s.cobranca==='avulsa') return '<span class="badge avulsa">Avulsa</span>';
+  if(s.cobranca==='pacote'){
+    if(!sessaoConta(s)) return '<span class="badge pacote">Pacote</span>';
+    const pos = posicaoPacote(s.patientId, s.data, s.hora||'', s.id, []);
+    return `<span class="badge pacote">Pacote ${pos.ordem}/${pos.total}</span>`;
+  }
+  return '';
+}
+function atualizarSugestaoSessao(){
+  const patientId = document.getElementById('ms-paciente').value;
+  const data = document.getElementById('ms-data').value;
+  const hora = document.getElementById('ms-hora').value;
+  const cobranca = document.getElementById('ms-cobranca').value;
+  const idAtual = document.getElementById('ms-id').value;
+  const info = document.getElementById('ms-pacote-info');
+  let ordem = 1;
+  if(cobranca==='pacote' && patientId && data){
+    const pos = posicaoPacote(patientId, data, hora, idAtual, []);
+    ordem = pos.ordem;
+    const mes = new Date(data+'T00:00:00').toLocaleDateString('pt-BR',{month:'long'});
+    info.textContent = `Pacote mensal: esta é a ${pos.ordem}ª sessão de ${pos.total} do pacote de ${mes}.` + (pos.ordem>=5 ? ' 5ª sessão do mês: valor reduzido.' : '') + ' Pago antecipadamente, no início do mês.';
+  } else {
+    info.textContent = 'Sessão avulsa: paga individualmente, fora do pacote mensal.';
+  }
+  const v = document.getElementById('ms-valor');
+  if(v.dataset.auto==='1') v.value = valorSugerido(cobranca, ordem);
+}
+['ms-paciente','ms-data','ms-hora','ms-cobranca'].forEach(id=> document.getElementById(id).addEventListener('change', atualizarSugestaoSessao));
+document.getElementById('ms-valor').addEventListener('input', e=>{ e.target.dataset.auto='0'; });
+document.getElementById('ms-repetir').addEventListener('change', e=> document.getElementById('ms-repetir-opcoes').classList.toggle('hidden', !e.target.checked));
+
 document.getElementById('btn-nova-sessao').addEventListener('click', ()=> openSessionModal(null));
 function openSessionModal(id){
   const s = id ? state.sessions.find(x=>x.id===id) : null;
@@ -1394,25 +1532,36 @@ function openSessionModal(id){
   document.getElementById('ms-hora').value = s?.hora || '09:00';
   document.getElementById('ms-duracao').value = s?.duracao || 50;
   document.getElementById('ms-modalidade').value = s?.modalidade || 'Presencial';
-  document.getElementById('ms-valor').value = s?.valor ?? '';
+  document.getElementById('ms-cobranca').value = s?.cobranca || 'avulsa';
+  const v = document.getElementById('ms-valor');
+  v.value = s?.valor ?? '';
+  v.dataset.auto = s ? '0' : '1';
   document.getElementById('ms-status').value = s?.status || 'agendada';
   document.getElementById('ms-pagto-status').value = s?.pagamentoStatus || 'pendente';
   document.getElementById('ms-forma').value = s?.formaPagamento || '';
   document.getElementById('ms-obs').value = s?.observacoes || '';
   document.getElementById('ms-excluir').classList.toggle('hidden', !id);
+  document.getElementById('ms-bloco-repetir').classList.toggle('hidden', !!id);
+  document.getElementById('ms-repetir').checked = false;
+  document.getElementById('ms-repetir-opcoes').classList.add('hidden');
+  document.getElementById('ms-bloco-serie').classList.toggle('hidden', !(s && s.serieId));
+  document.getElementById('ms-aplicar-serie').checked = false;
   openModal('modal-sessao');
+  atualizarSugestaoSessao();
 }
+function dataBloqueada(iso){ return (state.blocks||[]).some(b=> b.inicio && b.fim && iso>=b.inicio && iso<=b.fim); }
 document.getElementById('ms-salvar').addEventListener('click', async ()=>{
   const id = document.getElementById('ms-id').value;
   const patientId = document.getElementById('ms-paciente').value;
   const patient = state.patients.find(p=>p.id===patientId);
   if(!patientId){ toast('Selecione um paciente', true); return; }
-  const payload = {
+  const base = {
     patientId, patientNome: patient?.nome||'',
     data: document.getElementById('ms-data').value,
     hora: document.getElementById('ms-hora').value,
     duracao: Number(document.getElementById('ms-duracao').value),
     modalidade: document.getElementById('ms-modalidade').value,
+    cobranca: document.getElementById('ms-cobranca').value,
     valor: Number(document.getElementById('ms-valor').value||0),
     status: document.getElementById('ms-status').value,
     pagamentoStatus: document.getElementById('ms-pagto-status').value,
@@ -1420,18 +1569,65 @@ document.getElementById('ms-salvar').addEventListener('click', async ()=>{
     observacoes: document.getElementById('ms-obs').value,
     atualizadoEm: serverTimestamp()
   };
+  if(!base.data || !base.hora){ toast('Informe data e hora.', true); return; }
   try{
-    if(id){ await updateDoc(doc(db,'sessoes',id), payload); }
-    else { payload.criadoEm = serverTimestamp(); await addDoc(collection(db,'sessoes'), payload); }
-    closeModal('modal-sessao'); toast('Sessão salva.');
+    if(id){
+      const orig = state.sessions.find(x=>x.id===id);
+      await updateDoc(doc(db,'sessoes',id), base);
+      if(orig?.serieId && document.getElementById('ms-aplicar-serie').checked){
+        const futuras = state.sessions.filter(x=> x.serieId===orig.serieId && x.id!==id && x.status==='agendada' && (x.data||'') > (orig.data||''));
+        for(const f of futuras){
+          const upd = { hora:base.hora, duracao:base.duracao, modalidade:base.modalidade, cobranca:base.cobranca, atualizadoEm: serverTimestamp() };
+          if(f.cobranca !== base.cobranca){
+            const ordem = base.cobranca==='pacote' ? posicaoPacote(f.patientId, f.data, base.hora, f.id, []).ordem : 1;
+            upd.valor = valorSugerido(base.cobranca, ordem);
+          }
+          await updateDoc(doc(db,'sessoes',f.id), upd);
+        }
+        toast('Sessão salva e aplicada a '+futuras.length+' sessão(ões) futuras da série.');
+      } else toast('Sessão salva.');
+    } else if(document.getElementById('ms-repetir').checked){
+      const semanas = Math.max(2, Math.min(52, Number(document.getElementById('ms-repetir-semanas').value||4)));
+      const valorManual = document.getElementById('ms-valor').dataset.auto==='0';
+      const serieId = 'serie'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+      const planejadas = [];
+      let criadas=0, puladas=0;
+      for(let i=0;i<semanas;i++){
+        const d = new Date(base.data+'T00:00:00'); d.setDate(d.getDate()+7*i);
+        const iso = isoDate(d);
+        if(dataBloqueada(iso)){ puladas++; continue; }
+        let valor = base.valor;
+        if(!valorManual){
+          const ordem = base.cobranca==='pacote' ? posicaoPacote(patientId, iso, base.hora, null, planejadas, serieId).ordem : 1;
+          valor = valorSugerido(base.cobranca, ordem);
+        }
+        planejadas.push({data:iso, hora:base.hora});
+        await addDoc(collection(db,'sessoes'), {...base, data:iso, valor, serieId, criadoEm: serverTimestamp()});
+        criadas++;
+      }
+      toast(criadas+' sessões criadas'+(puladas? ' ('+puladas+' puladas por horário bloqueado)':'')+'.');
+    } else {
+      base.criadoEm = serverTimestamp();
+      await addDoc(collection(db,'sessoes'), base);
+      toast('Sessão salva.');
+    }
+    closeModal('modal-sessao');
   }catch(ex){ toast('Erro ao salvar sessão.', true); }
 });
 document.getElementById('ms-excluir').addEventListener('click', async ()=>{
   const id = document.getElementById('ms-id').value;
   if(!id) return;
+  const s = state.sessions.find(x=>x.id===id);
   if(!confirm('Excluir esta sessão?')) return;
+  let extras = 0;
+  if(s?.serieId){
+    const futuras = state.sessions.filter(x=> x.serieId===s.serieId && x.id!==id && x.status==='agendada' && (x.data||'') > (s.data||''));
+    if(futuras.length && confirm('Excluir também as '+futuras.length+' próximas sessões agendadas deste horário fixo?')){
+      for(const f of futuras){ await deleteDoc(doc(db,'sessoes',f.id)); extras++; }
+    }
+  }
   await deleteDoc(doc(db,'sessoes',id));
-  closeModal('modal-sessao'); toast('Sessão excluída.');
+  closeModal('modal-sessao'); toast('Sessão excluída'+(extras? ' (e mais '+extras+' da série)':'')+'.');
 });
 
 /* ---- Modal bloqueio ---- */
@@ -1515,7 +1711,7 @@ function openPatientModal(id){
   document.getElementById('mp-menor').checked = !!p?.menorIdade;
   document.getElementById('mp-responsavel-block').classList.toggle('hidden', !p?.menorIdade);
   document.getElementById('mp-responsaveis-list').innerHTML = (p?.responsaveis||[]).map(r=>responsavelRowHTML(r)).join('') || responsavelRowHTML();
-  const tiposPredefinidos = ['Psicoterapia','Orientação Escolar','Laudo/Relatório','Avaliação Psicológica'];
+  const tiposPredefinidos = ['Psicoterapia','Orientação Escolar','Laudo/Relatório','Avaliação Psicológica','Supervisão'];
   const tiposAtuais = p?.tipoAtendimento||[];
   document.querySelectorAll('.mp-tipo-cb').forEach(cb=> cb.checked = tiposAtuais.includes(cb.value));
   document.getElementById('mp-tipo-outro').value = tiposAtuais.filter(t=> !tiposPredefinidos.includes(t)).join(', ');
@@ -1558,7 +1754,7 @@ document.getElementById('mp-salvar').addEventListener('click', async ()=>{
     if(id){ await updateDoc(doc(db,'pacientes',id), payload); toast('Paciente atualizado.'); }
     else{
       payload.criadoEm = serverTimestamp();
-      payload.contrato = { texto: state.config.modeloContrato, aceito:false };
+      payload.contrato = { texto: modeloParaPaciente(payload), aceito:false };
       const ref = await addDoc(collection(db,'pacientes'), payload);
       toast('Paciente cadastrado.');
       state.currentPatientId = ref.id;
@@ -1657,7 +1853,7 @@ function renderPatientDetail(id){
 
   // Contrato
   const c = p.contrato||{};
-  document.getElementById('contrato-texto').value = c.texto || state.config.modeloContrato;
+  document.getElementById('contrato-texto').value = c.texto || modeloParaPaciente(p);
   document.getElementById('contrato-aceito').checked = !!c.aceito;
   document.getElementById('contrato-assinante').value = c.assinante || p.nome;
   document.getElementById('contrato-data').value = c.data || '';
@@ -1749,6 +1945,11 @@ document.getElementById('btn-salvar-anamnese').addEventListener('click', async (
   toast('Anamnese salva.');
 });
 
+document.getElementById('btn-carregar-modelo').addEventListener('click', ()=>{
+  const sup = document.getElementById('contrato-modelo-sel').value==='supervisao';
+  if(!confirm('Substituir o texto atual do contrato pelo modelo de '+(sup?'supervisão':'psicoterapia')+'? As alterações não salvas serão perdidas.')) return;
+  document.getElementById('contrato-texto').value = sup ? (state.config.modeloContratoSupervisao || modeloSupervisaoPadrao()) : state.config.modeloContrato;
+});
 document.getElementById('btn-imprimir-contrato').addEventListener('click', ()=>{
   const p = state.patients.find(x=>x.id===state.currentPatientId);
   if(!p) return;
@@ -1766,8 +1967,9 @@ document.getElementById('btn-imprimir-contrato').addEventListener('click', ()=>{
   const dataRef = p.contrato?.aceito && p.contrato?.data ? p.contrato.data : isoDate(new Date());
   corpo += `<div style="page-break-inside:avoid;break-inside:avoid"><p style="margin-top:8mm">${escapeHtml(fecho)}</p>
     <p class="data-local">${escapeHtml(cidade)}, ${escapeHtml(dataPorExtenso(dataRef))}.</p>`;
-  const assinantes = [{nome:p.nome, papel:p.menorIdade? 'Paciente (menor de idade)':'Paciente', cpf:p.cpf}];
-  (p.responsaveis||[]).forEach(r=> assinantes.push({nome:r.nome, papel:'Responsável legal', cpf:r.cpf}));
+  const sup = /^\s*CONTRATO DE SUPERVIS/i.test(texto);
+  const assinantes = [{nome:p.nome, papel: sup ? 'Supervisionando(a)' : (p.menorIdade? 'Paciente (menor de idade)':'Paciente'), cpf:p.cpf}];
+  if(!sup) (p.responsaveis||[]).forEach(r=> assinantes.push({nome:r.nome, papel:'Responsável legal', cpf:r.cpf}));
   corpo += `<div class="assinaturas">` + assinantes.map(a=>`<div class="ass"><div class="sig-line">${escapeHtml(a.nome||'')}<br>${escapeHtml(a.papel)}${a.cpf? '<br>CPF: '+escapeHtml(a.cpf):''}</div></div>`).join('') + `</div>`;
   corpo += `<div class="signature"><div class="stamp-space"><span>carimbo e assinatura</span></div><div class="sig-line">${escapeHtml(cfg.nome||'')}<br>Psicóloga<br>CRP ${escapeHtml(cfg.crp||'')}</div></div></div>`;
   if(p.contrato?.assinaturaDigital){
@@ -1776,7 +1978,7 @@ document.getElementById('btn-imprimir-contrato').addEventListener('click', ()=>{
       ${p.contrato.contratoHash? '<br>Hash de verificação do texto assinado: '+escapeHtml(p.contrato.contratoHash):''}
     </div>`;
   }
-  abrirImpressao('Contrato de Psicoterapia', corpo, {assinatura:false, capa:true});
+  abrirImpressao(sup ? 'Contrato de Supervisão Profissional' : 'Contrato de Psicoterapia', corpo, {assinatura:false, capa:true});
 });
 document.getElementById('btn-salvar-contrato-texto').addEventListener('click', async ()=>{
   const id = state.currentPatientId;
@@ -1860,12 +2062,13 @@ document.getElementById('btn-gerar-link-contrato').addEventListener('click', asy
   const p = state.patients.find(x=>x.id===id);
   const texto = document.getElementById('contrato-texto').value;
   if(!p || !texto.trim()){ toast('O texto do contrato está vazio.', true); return; }
-  if(texto.includes('[valor]') || texto.includes('[Pix / outro]')){
-    if(!confirm('O texto ainda tem campos como "[valor]" ou "[Pix / outro]" sem preencher. Gerar o link mesmo assim?')) return;
+  if(/\[[^\]]+\]/.test(texto)){
+    if(!confirm('O texto ainda tem campos entre colchetes, como "'+texto.match(/\[[^\]]+\]/)[0]+'", sem preencher. Gerar o link mesmo assim?')) return;
   }
   const contratoHash = await sha256Hex(texto);
   const ref = await addDoc(collection(db,'contratos_assinatura'), {
-    patientId:id, nomePaciente:p.nome, texto, contratoHash, status:'aguardando', criadoEm: serverTimestamp()
+    patientId:id, nomePaciente:p.nome, texto, contratoHash, status:'aguardando', criadoEm: serverTimestamp(),
+    ...(/^\s*CONTRATO DE SUPERVIS/i.test(texto) ? {titulo:'Contrato de supervisão', papeis:['Supervisionando(a)'], lgpdTexto: LGPD_SUPERVISAO} : {})
   });
   // mantém também o texto salvo no cadastro
   await updateDoc(doc(db,'pacientes',id), {contrato: {...(p.contrato||{}), texto}});
@@ -2081,7 +2284,7 @@ document.getElementById('btn-imprimir-prontuario').addEventListener('click', ()=
       campoImpressao('Motivo', p.encerramento?.motivo), campoImpressao('Observações', p.encerramento?.obs)
     ].join(''));
   }
-  abrirImpressao('Prontuário de Psicoterapia — '+p.nome, body);
+  abrirImpressao((ehSupervisao(p) ? 'Registro de Supervisão — ' : 'Prontuário de Psicoterapia — ')+p.nome, body);
 });
 function dataPorExtenso(iso){
   if(!iso) return '';
@@ -2125,7 +2328,7 @@ function renderPatientFinanceiro(patientId){
   document.getElementById('pd-financeiro-body').innerHTML = list.map(s=>`
     <tr>
       <td>${fmtDate(s.data)}</td>
-      <td>${s.modalidade}</td>
+      <td>${s.modalidade} ${etiquetaCobranca(s)}</td>
       <td>${fmtMoney(s.valor)}</td>
       <td><span class="badge ${s.pagamentoStatus}">${s.pagamentoStatus==='pago'?'Pago':'Pendente'}</span></td>
       <td style="white-space:nowrap">
@@ -2154,7 +2357,7 @@ function renderFinanceiro(){
   document.getElementById('fin-table-body').innerHTML = list.sort((a,b)=>a.data.localeCompare(b.data)).map(s=>`
     <tr>
       <td>${fmtDate(s.data)}</td>
-      <td>${s.patientNome}</td>
+      <td>${escapeHtml(s.patientNome||'')} ${etiquetaCobranca(s)}</td>
       <td>${fmtMoney(s.valor)}</td>
       <td>${s.formaPagamento||'—'}</td>
       <td><span class="badge ${s.pagamentoStatus}">${s.pagamentoStatus==='pago'?'Pago':'Pendente'}</span></td>
@@ -2259,12 +2462,16 @@ async function descartarFormulario(id){
 /* ==================== CONFIGURAÇÕES ==================== */
 function renderConfigForm(){
   document.getElementById('cfg-nome').value = state.config.nome||'';
+  document.getElementById('cfg-valor-avulsa').value = state.config.valorAvulsa ?? 140;
+  document.getElementById('cfg-valor-pacote').value = state.config.valorPacote ?? 120;
+  document.getElementById('cfg-valor-quinta').value = state.config.valorQuintaSessao ?? 100;
   document.getElementById('cfg-crp').value = state.config.crp||'';
   document.getElementById('cfg-telefone').value = state.config.telefone||'';
   document.getElementById('cfg-instagram').value = state.config.instagram||'';
   document.getElementById('cfg-email').value = state.config.email||'';
   document.getElementById('cfg-endereco').value = state.config.endereco||'';
   document.getElementById('cfg-modelo-contrato').value = state.config.modeloContrato||'';
+  document.getElementById('cfg-modelo-supervisao').value = state.config.modeloContratoSupervisao || modeloSupervisaoPadrao();
   document.getElementById('cfg-recepcao-email').value = state.config.recepcaoEmail||'';
 }
 document.getElementById('btn-salvar-config').addEventListener('click', async ()=>{
@@ -2285,6 +2492,18 @@ document.getElementById('btn-salvar-modelo').addEventListener('click', async ()=
   await setDoc(doc(db,'config','geral'), {modeloContrato}, {merge:true});
   state.config.modeloContrato = modeloContrato;
   toast('Modelo de contrato salvo.');
+});
+document.getElementById('btn-salvar-valores').addEventListener('click', async ()=>{
+  const v = { valorAvulsa:Number(document.getElementById('cfg-valor-avulsa').value||0), valorPacote:Number(document.getElementById('cfg-valor-pacote').value||0), valorQuintaSessao:Number(document.getElementById('cfg-valor-quinta').value||0) };
+  await setDoc(doc(db,'config','geral'), v, {merge:true});
+  state.config = {...state.config, ...v};
+  toast('Valores padrão salvos.');
+});
+document.getElementById('btn-salvar-modelo-supervisao').addEventListener('click', async ()=>{
+  const modeloContratoSupervisao = document.getElementById('cfg-modelo-supervisao').value;
+  await setDoc(doc(db,'config','geral'), {modeloContratoSupervisao}, {merge:true});
+  state.config.modeloContratoSupervisao = modeloContratoSupervisao;
+  toast('Modelo de contrato de supervisão salvo.');
 });
 document.getElementById('btn-salvar-recepcao').addEventListener('click', async ()=>{
   const email = document.getElementById('cfg-recepcao-email').value.trim();
