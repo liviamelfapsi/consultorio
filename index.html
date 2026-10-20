@@ -554,6 +554,12 @@
             </div>
             <button class="btn sm" id="btn-registrar-aceite">Registrar aceite</button>
             <p class="muted" id="contrato-status" style="margin-top:10px"></p>
+            <div class="card" style="margin-top:18px;background:var(--surface-2)">
+              <h4 style="margin:0 0 6px">Assinatura digital por link individual</h4>
+              <p class="muted" style="margin:0 0 12px">Adapte o texto acima a este paciente (valores, forma de pagamento, datas), salve e gere o link. O paciente abre o link, lê <em>este</em> texto e assina. A assinatura (com hash e dados de auditoria) é registrada automaticamente aqui. Se mudar o texto depois, gere um novo link.</p>
+              <button class="btn sm" id="btn-gerar-link-contrato">Gerar link de assinatura com o texto acima</button>
+              <div id="contrato-links" style="margin-top:12px"></div>
+            </div>
           </div>
         </div>
 
@@ -1593,6 +1599,7 @@ function renderPatientDetail(id){
   document.getElementById('pt-plano').value = pt.plano||'';
   document.getElementById('pt-status').textContent = pt.atualizadoEm ? 'Última atualização: '+fmtDate(pt.atualizadoEm) : 'Ainda não preenchido';
 
+  renderContratoLinks(id);
   renderPatientFinanceiro(id);
   renderProntuario(id);
   renderDocumentos(id);
@@ -1703,6 +1710,79 @@ document.getElementById('btn-registrar-aceite').addEventListener('click', async 
   };
   await updateDoc(doc(db,'pacientes',id), {contrato});
   toast('Aceite registrado.');
+});
+
+/* ---- Contrato individual com link de assinatura ---- */
+async function sha256Hex(texto){
+  try{
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+    return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  }catch(ex){ return ''; }
+}
+function linkAssinatura(id){ return location.href.split('#')[0].replace(/[^\/]*$/, '') + 'assinatura.html?id=' + id; }
+async function renderContratoLinks(patientId){
+  const el = document.getElementById('contrato-links');
+  if(!el) return;
+  let list = [];
+  try{
+    const snap = await getDocs(query(collection(db,'contratos_assinatura'), where('patientId','==',patientId)));
+    list = snap.docs.map(d=>({id:d.id, ...d.data()}));
+  }catch(ex){ el.innerHTML = '<div class="muted">Não foi possível carregar os links.</div>'; return; }
+  const ms = v=> !v ? 0 : (v.toDate ? v.toDate() : new Date(v)).getTime();
+  list.sort((a,b)=> ms(b.criadoEm)-ms(a.criadoEm));
+  // aplica ao cadastro assinaturas ainda não aplicadas
+  for(const c of list){
+    if(c.status==='assinado' && !c.aplicado){
+      const p = state.patients.find(x=>x.id===patientId);
+      const contrato = {
+        ...(p?.contrato||{}), texto: c.texto, aceito:true, assinante: c.assinadoPor,
+        data: isoDate(new Date()), assinaturaDigital:true, contratoHash: c.assinaturaHash || c.contratoHash || '',
+        assinaturaAuditoria: c.assinaturaAuditoria||null, assinaturaEnviadaEm: c.assinadoEm||null,
+        assinanteCpf: c.assinanteCpf||'', assinantePapel: c.assinantePapel||''
+      };
+      await updateDoc(doc(db,'pacientes',patientId), {contrato, lgpdConsentimento: true});
+      await updateDoc(doc(db,'contratos_assinatura',c.id), {aplicado:true});
+      c.aplicado = true;
+      toast('Contrato assinado por '+c.assinadoPor+' registrado no cadastro.');
+    }
+  }
+  el.innerHTML = list.length ? list.map(c=>`
+    <div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px;background:var(--surface)">
+      <div class="row-between" style="margin-bottom:6px">
+        <span class="muted">Gerado em ${escapeHtml(fmtDateHora(c.criadoEm))}</span>
+        <span class="badge ${c.status==='assinado'?'pago':'pendente'}">${c.status==='assinado'?'Assinado':(c.status==='cancelado'?'Cancelado':'Aguardando assinatura')}</span>
+      </div>
+      ${c.status==='assinado'
+        ? `<div>Assinado por <strong>${escapeHtml(c.assinadoPor||'')}</strong> (${escapeHtml(c.assinantePapel||'')}) em ${escapeHtml(fmtDateHora(c.assinadoEm))}</div>`
+        : (c.status==='cancelado' ? '' : `<div style="display:flex;gap:8px"><input readonly value="${escapeHtml(linkAssinatura(c.id))}" style="flex:1" onclick="this.select()"><button class="btn secondary sm" data-copiar-link="${c.id}">Copiar</button><button class="btn ghost sm" data-cancelar-link="${c.id}">Cancelar</button></div>`)}
+    </div>`).join('') : '<div class="muted">Nenhum link gerado para este paciente.</div>';
+  el.querySelectorAll('[data-copiar-link]').forEach(b=> b.addEventListener('click', async ()=>{
+    const url = linkAssinatura(b.dataset.copiarLink);
+    try{ await navigator.clipboard.writeText(url); toast('Link copiado.'); }
+    catch(ex){ const inp=b.parentElement.querySelector('input'); inp.select(); document.execCommand('copy'); toast('Link copiado.'); }
+  }));
+  el.querySelectorAll('[data-cancelar-link]').forEach(b=> b.addEventListener('click', async ()=>{
+    if(!confirm('Cancelar este link? O paciente não conseguirá mais assinar por ele.')) return;
+    await updateDoc(doc(db,'contratos_assinatura',b.dataset.cancelarLink), {status:'cancelado'});
+    renderContratoLinks(patientId);
+  }));
+}
+document.getElementById('btn-gerar-link-contrato').addEventListener('click', async ()=>{
+  const id = state.currentPatientId;
+  const p = state.patients.find(x=>x.id===id);
+  const texto = document.getElementById('contrato-texto').value;
+  if(!p || !texto.trim()){ toast('O texto do contrato está vazio.', true); return; }
+  if(texto.includes('[valor]') || texto.includes('[Pix / outro]')){
+    if(!confirm('O texto ainda tem campos como "[valor]" ou "[Pix / outro]" sem preencher. Gerar o link mesmo assim?')) return;
+  }
+  const contratoHash = await sha256Hex(texto);
+  const ref = await addDoc(collection(db,'contratos_assinatura'), {
+    patientId:id, nomePaciente:p.nome, texto, contratoHash, status:'aguardando', criadoEm: serverTimestamp()
+  });
+  // mantém também o texto salvo no cadastro
+  await updateDoc(doc(db,'pacientes',id), {contrato: {...(p.contrato||{}), texto}});
+  toast('Link gerado. Copie e envie ao paciente.');
+  renderContratoLinks(id);
 });
 
 document.getElementById('btn-salvar-encerramento').addEventListener('click', async ()=>{
