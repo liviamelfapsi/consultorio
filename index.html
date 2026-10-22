@@ -3,6 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#7C4726">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Consultório">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 <title>Consultório · Lívia Melfa</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600;1,700&family=Questrial&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -129,7 +137,21 @@
   .card h3{font-size:15px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin-bottom:14px}
   .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-  @media(max-width:760px){.grid-2,.grid-3{grid-template-columns:1fr}}
+  @media(max-width:760px){
+    .grid-2,.grid-3{grid-template-columns:1fr}
+    #app{flex-direction:column}
+    #sidebar{position:fixed;left:0;right:0;bottom:0;top:auto;width:100%;z-index:50;flex-direction:row;align-items:stretch;padding:6px 6px calc(6px + env(safe-area-inset-bottom));overflow-x:auto;gap:2px;box-shadow:0 -2px 12px rgba(0,0,0,.18)}
+    #sidebar .brand,#sidebar .spacer,#user-badge{display:none}
+    .nav-item,#logout-btn{flex:0 0 auto;width:auto;min-width:68px;flex-direction:column;justify-content:center;gap:2px;padding:7px 10px;font-size:11px;text-align:center;white-space:nowrap;margin:0}
+    #topbar{padding:max(12px,env(safe-area-inset-top)) 14px 12px;gap:10px}
+    #topbar h2{font-size:17px}
+    #topbar .search-box input{width:150px}
+    #content{padding:16px 14px 110px}
+    .card{padding:14px;overflow-x:auto}
+    .modal{width:96vw !important;max-width:none !important;max-height:92vh;overflow-y:auto}
+    .row-between{flex-wrap:wrap;gap:8px}
+    table{font-size:13px}
+  }
 
   .stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
   .stat .n{font-family:'Lora',serif;font-size:28px;font-weight:600;color:var(--primary)}
@@ -406,7 +428,7 @@
                 <div class="field"><label>Idade do diagnóstico</label><input id="an-idade-diagnostico"></div>
               </div>
               <div class="grid-2">
-                <div class="field"><label>Se TEA — nível de suporte</label><input id="an-nivel-suporte" placeholder="ex.: Nível 1 de suporte"></div>
+                <div class="field"><label>Se TEA — nível de suporte (quando houver)</label><input id="an-nivel-suporte" placeholder="ex.: Nível 1 de suporte"></div>
                 <div class="field"><label>Profissional que diagnosticou</label><input id="an-profissional-diagnostico"></div>
               </div>
               <div class="field"><label>Possui laudo?</label>
@@ -417,13 +439,13 @@
             <details open>
               <summary><strong>2 · Queixa principal</strong></summary>
               <div class="field"><label>O que motivou a busca por atendimento neste momento?</label><textarea id="an-queixa"></textarea></div>
-              <div class="field"><label>Quais comportamentos mais preocupam atualmente?</label><textarea id="an-comportamentos-preocupantes"></textarea></div>
+              <div class="field"><label>Quais comportamentos, sentimentos ou situações mais preocupam atualmente?</label><textarea id="an-comportamentos-preocupantes"></textarea></div>
               <div class="field"><label>Motivo da busca por terapia (contexto geral)</label><textarea id="an-motivo"></textarea></div>
               <div class="field"><label>Histórico da queixa atual</label><textarea id="an-historico"></textarea></div>
             </details>
 
             <details>
-              <summary><strong>3 · Histórico do desenvolvimento</strong></summary>
+              <summary><strong>3 · Histórico do desenvolvimento (quando pertinente)</strong></summary>
               <div class="field"><label>Comunicação (fala, linguagem funcional/ecolalia, compreensão de instruções)</label><textarea id="an-comunicacao"></textarea></div>
               <div class="field"><label>Interação social (contato visual, busca por interação, amizades)</label><textarea id="an-interacao-social"></textarea></div>
               <div class="field"><label>Comportamentos (estereotipias, interesses restritos, rigidez de rotina)</label><textarea id="an-comportamentos-dev"></textarea></div>
@@ -431,12 +453,20 @@
             </details>
 
             <details>
-              <summary><strong>4 · Histórico escolar</strong></summary>
+              <summary><strong>4 · Histórico escolar, formação e trabalho</strong></summary>
               <div class="grid-2">
-                <div class="field"><label>Escola</label><input id="an-escola-nome"></div>
-                <div class="field"><label>Série</label><input id="an-escola-serie"></div>
+                <div class="field"><label>Escolaridade</label>
+                  <select id="an-escolaridade"><option value="">—</option><option>Ensino fundamental</option><option>Ensino médio</option><option>Curso técnico</option><option>Ensino superior em andamento</option><option>Ensino superior completo</option><option>Pós-graduação</option><option>Outra</option></select>
+                </div>
+                <div class="field"><label>Faz ou fez faculdade / curso? Qual e onde?</label><input id="an-formacao" placeholder="ex.: Psicologia — Univ. X (cursando)"></div>
               </div>
-              <div class="field"><label>Possui mediador/acompanhante?</label>
+              <div class="grid-2">
+                <div class="field"><label>Escola / instituição de ensino atual (se estuda)</label><input id="an-escola-nome"></div>
+                <div class="field"><label>Série / ano / período</label><input id="an-escola-serie"></div>
+              </div>
+              <div class="field"><label>Ocupação atual (trabalho, empresa, cargo)</label><input id="an-ocupacao"></div>
+              <div class="field"><label>Como é a experiência no estudo e/ou trabalho? (carga, relação com colegas e chefia, satisfação, pressões)</label><textarea id="an-trabalho"></textarea></div>
+              <div class="field"><label>Possui mediador/acompanhante escolar? (quando aplicável)</label>
                 <select id="an-escola-mediador"><option value="">—</option><option value="sim">Sim</option><option value="não">Não</option></select>
               </div>
               <div class="field"><label>Dificuldades</label>
@@ -444,16 +474,18 @@
                   <div class="checkbox-row"><input type="checkbox" id="an-dif-socializacao"><label for="an-dif-socializacao">Socialização</label></div>
                   <div class="checkbox-row"><input type="checkbox" id="an-dif-aprendizagem"><label for="an-dif-aprendizagem">Aprendizagem</label></div>
                   <div class="checkbox-row"><input type="checkbox" id="an-dif-comportamento"><label for="an-dif-comportamento">Comportamento</label></div>
+                  <div class="checkbox-row"><input type="checkbox" id="an-dif-trabalho"><label for="an-dif-trabalho">Trabalho / desempenho</label></div>
                 </div>
               </div>
-              <div class="field"><label>Já sofreu bullying?</label>
+              <div class="field"><label>Já sofreu bullying ou assédio (escola ou trabalho)?</label>
                 <select id="an-bullying"><option value="">—</option><option value="sim">Sim</option><option value="não">Não</option></select>
               </div>
             </details>
 
             <details>
-              <summary><strong>5 · Rotina e autonomia</strong></summary>
-              <div class="field"><label>Como é a rotina diária?</label><textarea id="an-rotina"></textarea></div>
+              <summary><strong>5 · Rotina, relacionamentos e autonomia</strong></summary>
+              <div class="field"><label>Como é a rotina diária? (estudo, trabalho, descanso, cuidados pessoais)</label><textarea id="an-rotina"></textarea></div>
+              <div class="field"><label>Relacionamentos (família, amizades, vida afetiva) e rede de apoio</label><textarea id="an-relacionamentos"></textarea></div>
               <div class="field"><label>Como lida com mudanças?</label><textarea id="an-rotina-mudancas"></textarea></div>
               <div class="field"><label>Autonomia</label>
                 <div class="grid-3">
@@ -478,7 +510,7 @@
                 <div class="field"><label>Desencadeadores</label><input id="an-crises-gatilhos"></div>
                 <div class="field"><label>Duração</label><input id="an-crises-duracao"></div>
               </div>
-              <div class="field"><label>Como a família reage?</label><textarea id="an-crises-familia"></textarea></div>
+              <div class="field"><label>Como a família ou pessoas próximas reagem?</label><textarea id="an-crises-familia"></textarea></div>
               <div class="field"><label>Consegue se acalmar sozinho(a)?</label><textarea id="an-crises-autorregulacao"></textarea></div>
             </details>
 
@@ -525,13 +557,13 @@
 
             <details>
               <summary><strong>9 · Dinâmica familiar e condições socioeconômicas</strong></summary>
-              <div class="field"><label>Como a família lida com a demanda/diagnóstico? Há sobrecarga emocional, divisão de cuidados, conflitos?</label><textarea id="an-familiar"></textarea></div>
-              <div class="field"><label>Moradia, renda familiar, convênio médico e outras condições relevantes</label><textarea id="an-socioeconomico"></textarea></div>
+              <div class="field"><label>Como a família (ou pessoas próximas) lida com a queixa ou demanda? Há sobrecarga emocional, divisão de cuidados, conflitos?</label><textarea id="an-familiar"></textarea></div>
+              <div class="field"><label>Com quem mora, moradia, renda, convênio médico e outras condições relevantes</label><textarea id="an-socioeconomico"></textarea></div>
             </details>
 
             <details>
               <summary><strong>10 · Expectativas e observações clínicas</strong></summary>
-              <div class="field"><label>O que esperam do tratamento? Quais mudanças desejam? O que já foi tentado?</label><textarea id="an-expectativas"></textarea></div>
+              <div class="field"><label>O que espera do tratamento (ou esperam, quando há responsáveis)? Quais mudanças deseja? O que já foi tentado?</label><textarea id="an-expectativas"></textarea></div>
               <div class="field"><label>Observações clínicas gerais</label><textarea id="an-obs"></textarea></div>
             </details>
           </div>
@@ -1222,20 +1254,23 @@ function anamneseHtmlBody(p){
     campoImpressao('Comunicação', a.comunicacao), campoImpressao('Interação social', a.interacaoSocial),
     campoImpressao('Comportamentos', a.comportamentosDev), campoImpressao('Sensibilidade sensorial', a.sensorial)
   ].join(''));
-  out += secaoImpressao('Histórico escolar', [
-    campoImpressao('Escola', a.escolaNome), campoImpressao('Série', a.escolaSerie), campoImpressao('Possui mediador', a.escolaMediador),
-    campoImpressao('Dificuldades', [a.difSocializacao&&'Socialização', a.difAprendizagem&&'Aprendizagem', a.difComportamento&&'Comportamento'].filter(Boolean).join(', ')),
-    campoImpressao('Já sofreu bullying', a.bullying)
+  out += secaoImpressao('Histórico escolar, formação e trabalho', [
+    campoImpressao('Escolaridade', a.escolaridade), campoImpressao('Faculdade / curso', a.formacao),
+    campoImpressao('Escola / instituição', a.escolaNome), campoImpressao('Série / período', a.escolaSerie),
+    campoImpressao('Ocupação atual', a.ocupacao), campoImpressao('Experiência no estudo/trabalho', a.trabalho),
+    campoImpressao('Possui mediador', a.escolaMediador),
+    campoImpressao('Dificuldades', [a.difSocializacao&&'Socialização', a.difAprendizagem&&'Aprendizagem', a.difComportamento&&'Comportamento', a.difTrabalho&&'Trabalho / desempenho'].filter(Boolean).join(', ')),
+    campoImpressao('Bullying ou assédio', a.bullying)
   ].join(''));
-  out += secaoImpressao('Rotina e autonomia', [
-    campoImpressao('Rotina diária', a.rotina), campoImpressao('Lida com mudanças', a.rotinaMudancas),
+  out += secaoImpressao('Rotina, relacionamentos e autonomia', [
+    campoImpressao('Rotina diária', a.rotina), campoImpressao('Relacionamentos e rede de apoio', a.relacionamentos), campoImpressao('Lida com mudanças', a.rotinaMudancas),
     campoImpressao('Autonomia', [a.autHigiene&&'Higiene', a.autAlimentacao&&'Alimentação', a.autOrganizacao&&'Organização'].filter(Boolean).join(', ')),
     campoImpressao('Uso de telas', a.usoTelas), campoImpressao('Lazer', a.lazer)
   ].join(''));
   out += secaoImpressao('Comportamento e regulação emocional', [
     campoImpressao('Apresenta crises', a.crises), campoImpressao('Como são as crises', a.crisesComo),
     campoImpressao('Desencadeadores', a.crisesGatilhos), campoImpressao('Duração', a.crisesDuracao),
-    campoImpressao('Reação da família', a.crisesFamilia), campoImpressao('Autorregulação', a.crisesAutorregulacao)
+    campoImpressao('Reação da família / pessoas próximas', a.crisesFamilia), campoImpressao('Autorregulação', a.crisesAutorregulacao)
   ].join(''));
   out += secaoImpressao('Saúde e acompanhamentos', [
     campoImpressao('Terapias', [a.terPsicoterapia&&'Psicoterapia', a.terFono&&'Fonoaudiologia', a.terTO&&'Terapia ocupacional', a.terABA&&'ABA'].filter(Boolean).join(', ')),
@@ -1816,6 +1851,12 @@ function renderPatientDetail(id){
   document.getElementById('an-interacao-social').value = a.interacaoSocial||'';
   document.getElementById('an-comportamentos-dev').value = a.comportamentosDev||'';
   document.getElementById('an-sensorial').value = a.sensorial||'';
+  document.getElementById('an-escolaridade').value = a.escolaridade||'';
+  document.getElementById('an-formacao').value = a.formacao||'';
+  document.getElementById('an-ocupacao').value = a.ocupacao||'';
+  document.getElementById('an-trabalho').value = a.trabalho||'';
+  document.getElementById('an-dif-trabalho').checked = !!a.difTrabalho;
+  document.getElementById('an-relacionamentos').value = a.relacionamentos||'';
   document.getElementById('an-escola-nome').value = a.escolaNome||'';
   document.getElementById('an-escola-serie').value = a.escolaSerie||'';
   document.getElementById('an-escola-mediador').value = a.escolaMediador||'';
@@ -1905,6 +1946,12 @@ document.getElementById('btn-salvar-anamnese').addEventListener('click', async (
     interacaoSocial: document.getElementById('an-interacao-social').value,
     comportamentosDev: document.getElementById('an-comportamentos-dev').value,
     sensorial: document.getElementById('an-sensorial').value,
+    escolaridade: document.getElementById('an-escolaridade').value,
+    formacao: document.getElementById('an-formacao').value,
+    ocupacao: document.getElementById('an-ocupacao').value,
+    trabalho: document.getElementById('an-trabalho').value,
+    difTrabalho: document.getElementById('an-dif-trabalho').checked,
+    relacionamentos: document.getElementById('an-relacionamentos').value,
     escolaNome: document.getElementById('an-escola-nome').value,
     escolaSerie: document.getElementById('an-escola-serie').value,
     escolaMediador: document.getElementById('an-escola-mediador').value,
@@ -2527,6 +2574,9 @@ document.getElementById('btn-salvar-recepcao').addEventListener('click', async (
   state.config.recepcaoEmail = email;
   toast('Lembre-se: crie a conta desse e-mail no Firebase Authentication e o documento de permissão em "usuarios" (veja o guia).');
 });
+
+/* ---- App instalável (PWA) ---- */
+if('serviceWorker' in navigator && location.protocol==='https:'){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 </script>
 </body>
 </html>
